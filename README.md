@@ -25,4 +25,19 @@ just after `require("../../api/webhooks")(api)`, for instance.
 ```
 to the list of base plugins.
 
+# Servicebot events:
+Currently in version `v0.11.163` these are the events defined along with its meaning and whether their are implemented or not:
 
+- [X] `pre_provision`. Called before a new subscription is created.
+- [X] `post_provision`. Called after the new subscription is created.
+- [X] `pre_decommission`. Called before removing a subscription.
+- [X] `post_decommission`. Called after removing a subscription.
+- [X] `pre_reactivate`. Called before a subscription change its status from `cancelled` to another status.
+- [X] `post_reactivate`. Called after a subscription change its status due to an update in the payment plan.
+- [X] `pre_property_change`. Called before a subscription changes any of its properties. 
+- [X] `post_property_change`. Called after a subscription changes any of its properties. 
+- [X] `pre_payment_structure_change`. Called before a new payment structure is applied to a subscription.
+- [X] `post_payment_structure_change`. Called after a new payment structure is applied to a subscription.
+- [] `post_seat_created`. 
+- [] `post_seat_deleted`
+- [X] `post_cancellation_pending`. Called just after the request for a subscription to be cancelled at a given day in the future.
