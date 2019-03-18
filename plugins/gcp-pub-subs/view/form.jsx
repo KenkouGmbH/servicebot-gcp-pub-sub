@@ -348,7 +348,7 @@ class GCPPubSubs extends React.Component {
     this.setState({ showEventsInfo: false })
   }
 
-  rowActionsFormatter(cell, row) {
+  rowConfigActionsFormater(cell, row) {
     let dropdownOptions = [
       {
         type: "button",
@@ -368,6 +368,28 @@ class GCPPubSubs extends React.Component {
 
     return <Dropdown direction="right" dropdown={dropdownOptions} />
   }
+
+  rowTriggerActionsFormater(cell, row) {
+    let dropdownOptions = [
+      {
+        type: "button",
+        label: "Edit",
+        action: () => {
+          return this.openTriggerForm(row)
+        }
+      },
+      {
+        type: "button",
+        label: "Delete",
+        action: () => {
+          return this.deleteTrigger(row)
+        }
+      }
+    ]
+
+    return <Dropdown direction="right" dropdown={dropdownOptions} />
+  }
+
   render() {
     let self = this
     let { openConfig, config, openTrigger, trigger, configs } = this.state
@@ -478,7 +500,7 @@ class GCPPubSubs extends React.Component {
                     dataField="Actions"
                     className={"action-column-header"}
                     columnClassName={"action-column"}
-                    dataFormat={this.rowActionsFormatter.bind(this)}
+                    dataFormat={this.rowTriggerActionsFormater.bind(this)}
                     searchable={false}
                     width="80"
                     filter={false}
@@ -553,7 +575,7 @@ class GCPPubSubs extends React.Component {
                     dataField="Actions"
                     className={"action-column-header"}
                     columnClassName={"action-column"}
-                    dataFormat={this.rowActionsFormatter.bind(this)}
+                    dataFormat={this.rowConfigActionsFormater.bind(this)}
                     searchable={false}
                     width="80"
                     filter={false}
