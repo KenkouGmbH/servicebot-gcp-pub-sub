@@ -81,7 +81,7 @@ function* run(config, provide, channels) {
   })
 
   const sendToPubSub = eventName => async (event, sync_all = false) => {
-    console.log("[gcp-pub-sub] sending to pub/sub", eventName, event)
+    console.log("[GCP-PUB-SUB] sending to pub/sub", eventName, event)
     if (pubsubs[eventName]) {
       try {
         const messageIds = await Promise.all(

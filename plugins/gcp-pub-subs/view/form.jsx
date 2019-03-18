@@ -79,10 +79,10 @@ function GCPConfigModal(props) {
 }
 
 const lifecycleEvents = [
-  { name: "pre" },
-  { name: "post" },
-  { name: "pre_decom" },
-  { name: "post_decom" },
+  { name: "pre_provision" },
+  { name: "post_provision" },
+  { name: "pre_decommission" },
+  { name: "post_decommission" },
   { name: "pre_reactivate" },
   { name: "post_reactivate" },
   { name: "pre_property_change" },
@@ -604,7 +604,7 @@ class GCPPubSubs extends React.Component {
   }
 }
 
-let RouteDefinition = {
+const RouteDefinition = {
   component: GCPPubSubs,
   navType: "settings",
   name: "GCP Pub/Sub Settings",
