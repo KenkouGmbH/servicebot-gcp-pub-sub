@@ -1,18 +1,11 @@
-let {
-  call,
-  put,
-  all,
-  select,
-  fork,
-  spawn,
-  take
-} = require("redux-saga/effects")
-
+const { call } = require("redux-saga/effects")
+const { PubSub } = require("@google-cloud/pubsub")
 let consume = require("pluginbot/effects/consume")
 let bcrypt = require("bcryptjs")
 let fetch = require("node-fetch")
-let Promise = require("bluebird")
+let fs = require("fs")
 const crypto = require("crypto")
+
 function* run(config, provide, channels) {
   let db = yield consume(channels.database)
   // create tables if they don't exist
@@ -37,12 +30,71 @@ function* run(config, provide, channels) {
       .onDelete("CASCADE")
     console.log("Created 'gcp_pub_subs ' table.")
   })
+  // create temporary files with the content of the
+  // service accountm key
+  const getKeyFilenameFromId = id => `/tmp/service-account-${id}.json`
+  const createTempKeyFile = ({ id, service_account_key }) =>
+    new Promise((resolve, reject) => {
+      // create temp file
+      const fileName = getKeyFilenameFromId(id)
+      fs.writeFile(fileName, service_account_key, function(err) {
+        if (err) reject(err)
+        console.log(`${fileName} created`)
+        resolve()
+      })
+    })
+  // Initialising
+  const pubsubs = {}
+  yield call(async () => {
+    console.log("Initialising gcp service account files")
+    // dump the configurations already setup
+    // get all gcp configurations
+    const configs = await db
+      .select("id", "service_account_key")
+      .from("gcp_configs")
+    console.log("[DEBUG] configs found", configs)
+    await Promise.all(configs.map(createTempKeyFile))
+    // get all the triggers
+    const triggers = await db
+      .select(
+        "gcp_pub_subs.id",
+        "topic",
+        "event",
+        "gcp_config_id",
+        "project_id"
+      )
+      .from("gcp_pub_subs")
+      .innerJoin("gcp_configs", "gcp_pub_subs.gcp_config_id", "gcp_configs.id")
+    console.log("[DEBUG] triggers found", triggers)
+    triggers.forEach(({ id, event, topic, project_id, gcp_config_id }) => {
+      if (!pubsubs[event]) pubsubs[event] = []
+      pubsubs[event].push({
+        id,
+        topic,
+        client: new PubSub({
+          projectId: project_id,
+          keyFilename: getKeyFilenameFromId(gcp_config_id)
+        })
+      })
+    })
+    console.log("[DEBUG] pubsubs configured", pubsubs)
+  })
 
-  let sendToPubSub = eventName => async (event, sync_all = false) => {
-    console.log("[gcp-pub-sub] sending to pub/sub", eventName)
+  const sendToPubSub = eventName => async (event, sync_all = false) => {
+    console.log("[gcp-pub-sub] sending to pub/sub", eventName, event)
+    if (pubsubs[eventName]) {
+      try {
+        const messageIds = await Promise.all(
+          pubsubs[eventName].map(p => p.client.topic(p.topic).publish(event))
+        )
+        console.log(`message with id ${messageIds} sent`)
+      } catch (error) {
+        console.warn("something went wrong:", error)
+      }
+    }
   }
 
-  let lifecycleHook = [
+  const lifecycleHook = [
     {
       stage: "pre",
       run: sendToPubSub("pre_provision")
