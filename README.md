@@ -17,3 +17,12 @@ The following actions are needed to enable this plugin:
     require("../../api/gcp-pub-subs")(api)
 ```
 just after `require("../../api/webhooks")(api)`, for instance.
+- finally register the plugin in `config/pluginbot.config.js` by adding:
+```
+    ...
+    {"path" : `${PLUGIN_DIRECTORY}/gcp-pub-subs`},
+    ...
+```
+to the list of base plugins.
+
+
