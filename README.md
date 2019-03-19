@@ -2,7 +2,7 @@
 
 A plugin for servicebot that allows to publish lifecycle events to Google Pub/Sub
 
-# Installation
+## Installation
 
 The following actions are needed to enable this plugin:
 
@@ -25,8 +25,8 @@ just after `require("../../api/webhooks")(api)`, for instance.
 ```
 to the list of base plugins.
 
-# Servicebot events:
-Currently in version `v0.11.163` these are the events defined along with its meaning and whether their are implemented or not:
+## Servicebot events:
+In version `v0.11.163` the following are the events defined along with some simple description and whether their are implemented or not:
 
 - [X] `pre_provision`. Called before a new subscription is created.
 - [X] `post_provision`. Called after the new subscription is created.
@@ -39,5 +39,5 @@ Currently in version `v0.11.163` these are the events defined along with its mea
 - [X] `pre_payment_structure_change`. Called before a new payment structure is applied to a subscription.
 - [X] `post_payment_structure_change`. Called after a new payment structure is applied to a subscription.
 - [] `post_seat_created`. 
-- [] `post_seat_deleted`
+- [] `post_seat_deleted`.
 - [X] `post_cancellation_pending`. Called just after the request for a subscription to be cancelled at a given day in the future.
