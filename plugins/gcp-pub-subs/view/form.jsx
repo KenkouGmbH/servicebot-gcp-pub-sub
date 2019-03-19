@@ -8,8 +8,45 @@ import { required } from "redux-form-validators"
 import { Field } from "redux-form"
 import Buttons from "../../../views/components/elements/buttons.jsx"
 import Modal from "../../../views/components/utilities/modal.jsx"
-import "../stylesheets/webhooks.css"
+import "../stylesheets/gcp-pub-subs.css"
 import Content from "../../../views/components/layouts/content.jsx"
+
+const isJsonString = str => {
+  try {
+    JSON.parse(str)
+  } catch (e) {
+    return false
+  }
+  return true
+}
+
+const validJSON = value => {
+  if (!value) return "Service account data is needed"
+  if (!isJsonString(value)) return "Not a valid JSON"
+  const key = JSON.parse(value)
+  const fields = Object.keys(key)
+  // check if the key has the right fields
+  const requiredFields = [
+    "type",
+    "project_id",
+    "private_key_id",
+    "private_key",
+    "client_email",
+    "client_id",
+    "auth_uri",
+    "token_uri",
+    "auth_provider_x509_cert_url",
+    "client_x509_cert_url"
+  ]
+  const missingFields = requiredFields.reduce(
+    (acc, f) => (fields.indexOf(f) > -1 ? acc : [...acc, f]),
+    []
+  )
+  if (missingFields.length > 0)
+    return `JSON fields missing: ${missingFields.join(", ")}`
+
+  return undefined
+}
 
 function GCPConfigForm(props) {
   return (
@@ -17,7 +54,7 @@ function GCPConfigForm(props) {
       <Field
         name="service_account_key"
         type="textarea"
-        validate={[required()]}
+        validate={[required(), validJSON]}
         component={inputField}
         placeholder="Service accout key in JSON format"
       />
