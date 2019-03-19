@@ -79,19 +79,25 @@ function GCPConfigModal(props) {
 }
 
 const lifecycleEvents = [
-  { name: "pre_provision" },
-  { name: "post_provision" },
-  { name: "pre_decommission" },
-  { name: "post_decommission" },
-  { name: "pre_reactivate" },
-  { name: "post_reactivate" },
-  { name: "pre_property_change" },
-  { name: "post_property_change" },
-  { name: "pre_payment_structure_change" },
-  { name: "post_payment_structure_change" },
-  { name: "post_seat_created" },
-  { name: "post_seat_deleted" },
-  { name: "post_cancellation_pending" }
+  { value: "pre_provision", name: "Pre provision" },
+  { value: "post_provision", name: "Post provision" },
+  { value: "pre_decommission", name: "Pre decommission" },
+  { value: "post_decommission", name: "Post decommission" },
+  { value: "pre_reactivate", name: "Pre reactivate" },
+  { value: "post_reactivate", name: "Post reactivate" },
+  { value: "pre_property_change", name: "Pre property change" },
+  { value: "post_property_change", name: "Post property change" },
+  {
+    value: "pre_payment_structure_change",
+    name: "Pre payment structure change"
+  },
+  {
+    value: "post_payment_structure_change",
+    name: "Post payment structure change"
+  },
+  { value: "post_seat_created", name: "Post seat created" },
+  { value: "post_seat_deleted", name: "Post seat deleted" },
+  { value: "post_cancellation_pending", name: "Post cancellation pending" }
 ]
 
 function GCPTriggerForm(props) {
@@ -121,9 +127,9 @@ function GCPTriggerForm(props) {
       <div className={`sb-form-group`}>
         <Field name="event" component="select" placeholder="Servicebot event">
           {lifecycleEvents.map((event, index) => (
-            <option key={`evt-${index}`} value={event.name}>{`${event.name}:${
-              event.name
-            }`}</option>
+            <option key={`evt-${index}`} value={event.value}>{`${event.name} (${
+              event.value
+            })`}</option>
           ))}
         </Field>
       </div>
@@ -322,6 +328,10 @@ class GCPPubSubs extends React.Component {
         icon: "check",
         message: "Update has been successful"
       }
+    })
+    // ask the server to reload
+    Fetcher("/api/v1/gcp-pub-sub/reload").then(response => {
+      console.log("[GCP-PUB-SUB] server configuration reloaded:", response)
     })
     //re-render
     this.fetchConfigsData()

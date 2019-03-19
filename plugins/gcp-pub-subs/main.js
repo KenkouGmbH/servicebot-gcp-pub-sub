@@ -8,14 +8,16 @@ const crypto = require("crypto")
 
 function* run(config, provide, channels) {
   let db = yield consume(channels.database)
-  // create tables if they don't exist
+  // create gcp_configs table
   yield call(db.createTableIfNotExist, "gcp_configs", function(table) {
     table.increments()
     table.string("project_id").notNullable()
     table.string("service_account_key", 4000).notNullable()
     table.timestamps(true, true)
-    console.log("Created 'gpc_configs ' table.")
+    console.log("Created 'gcp_configs ' table.")
   })
+
+  // create gcp_pub_subs table
   yield call(db.createTableIfNotExist, "gcp_pub_subs", function(table) {
     table.increments()
     table.string("topic").notNullable()
@@ -30,6 +32,7 @@ function* run(config, provide, channels) {
       .onDelete("CASCADE")
     console.log("Created 'gcp_pub_subs ' table.")
   })
+
   // create temporary files with the content of the
   // service accountm key
   const getKeyFilenameFromId = id => `/tmp/service-account-${id}.json`
@@ -43,16 +46,31 @@ function* run(config, provide, channels) {
         resolve()
       })
     })
+
+  const registerHook = ({ id, event, topic, project_id, gcp_config_id }) => {
+    if (!pubsubs[event]) pubsubs[event] = []
+    pubsubs[event].push({
+      id,
+      topic,
+      client: new PubSub({
+        projectId: project_id,
+        keyFilename: getKeyFilenameFromId(gcp_config_id)
+      })
+    })
+  }
+
   // Initialising
-  const pubsubs = {}
-  yield call(async () => {
+  let pubsubs
+  const load = async () => {
     console.log("Initialising gcp service account files")
+    // clean the previous configurations
+    pubsubs = {}
     // dump the configurations already setup
     // get all gcp configurations
     const configs = await db
       .select("id", "service_account_key")
       .from("gcp_configs")
-    console.log("[DEBUG] configs found", configs)
+    console.log("[GCP-PUB-SUB] configs found", configs)
     await Promise.all(configs.map(createTempKeyFile))
     // get all the triggers
     const triggers = await db
@@ -65,27 +83,22 @@ function* run(config, provide, channels) {
       )
       .from("gcp_pub_subs")
       .innerJoin("gcp_configs", "gcp_pub_subs.gcp_config_id", "gcp_configs.id")
-    console.log("[DEBUG] triggers found", triggers)
-    triggers.forEach(({ id, event, topic, project_id, gcp_config_id }) => {
-      if (!pubsubs[event]) pubsubs[event] = []
-      pubsubs[event].push({
-        id,
-        topic,
-        client: new PubSub({
-          projectId: project_id,
-          keyFilename: getKeyFilenameFromId(gcp_config_id)
-        })
-      })
-    })
-    console.log("[DEBUG] pubsubs configured", pubsubs)
-  })
+    // console.log("[GCP-PUB-SUB] triggers found", triggers)
+    triggers.forEach(registerHook)
+    console.log("[GCP-PUB-SUB] pubsubs configured", pubsubs)
+  }
+
+  // bootstrap
+  yield call(load)
 
   const sendToPubSub = eventName => async (event, sync_all = false) => {
     console.log("[GCP-PUB-SUB] sending to pub/sub", eventName, event)
     if (pubsubs[eventName]) {
       try {
         const messageIds = await Promise.all(
-          pubsubs[eventName].map(p => p.client.topic(p.topic).publish(event))
+          pubsubs[eventName].map(({ client, topic }) =>
+            client.topic(topic).publish(Buffer.from(JSON.stringify(event)))
+          )
         )
         console.log(`message with id ${messageIds} sent`)
       } catch (error) {
@@ -149,21 +162,23 @@ function* run(config, provide, channels) {
     }
   ]
 
-  let processWebhooks = async (req, res, next) => {
-    let responses = await sendToPubSub("test")(
-      { event_name: "test", event_data: { test: "data" } },
-      true
-    )
-    res.json({ responses: responses })
+  const reloadTriggers = async (req, res, next) => {
+    console.log("[GCP-PUB-SUB] reloading ")
+    await load()
+    res.json({ reload: "success" })
   }
 
-  let generateHmac = function(body, secret) {
-    const hmac = crypto.createHmac("sha256", secret)
-    hmac.update(body)
-    return hmac.digest("hex")
-  }
+  const routeDefinition = [
+    {
+      endpoint: "/gcp-pub-sub/reload",
+      method: "get",
+      middleware: [reloadTriggers],
+      permissions: [],
+      description: "Reload and set all the triggers"
+    }
+  ]
 
-  yield provide({ lifecycleHook })
+  yield provide({ lifecycleHook, routeDefinition })
 }
 
 module.exports = { run }
