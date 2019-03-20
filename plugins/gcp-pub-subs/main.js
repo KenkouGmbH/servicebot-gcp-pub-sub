@@ -4,7 +4,6 @@ let consume = require("pluginbot/effects/consume")
 let bcrypt = require("bcryptjs")
 let fetch = require("node-fetch")
 let fs = require("fs")
-const crypto = require("crypto")
 
 function* run(config, provide, channels) {
   let db = yield consume(channels.database)
@@ -97,7 +96,9 @@ function* run(config, provide, channels) {
       try {
         const messageIds = await Promise.all(
           pubsubs[eventName].map(({ client, topic }) =>
-            client.topic(topic).publish(Buffer.from(JSON.stringify(event)))
+            client
+              .topic(topic, { autoCreate: true })
+              .publish(Buffer.from(JSON.stringify(event)))
           )
         )
         console.log(`message with id ${messageIds} sent`)
@@ -168,6 +169,45 @@ function* run(config, provide, channels) {
     res.json({ reload: "success" })
   }
 
+  const testTrigger = async (req, res, next) => {
+    const { id, event } = req.params
+    console.log("[GCP-PUB-SUB] testing trigger id:", id, " event:", event)
+    try {
+      const messages = []
+      // get the correspondent client
+      const { client: pubsub, topic: topicName } = pubsubs[event].filter(
+        c => `${c.id}` === id
+      )[0]
+      messages.push("const pubsub = new PubSub({...})")
+      // Creates the new topic
+      const topic = await pubsub.topic(topicName, { autoCreate: true })
+
+      messages.push(`const topicName = "${topicName}"`)
+      messages.push(
+        "const topic = await pubsub.topic(topicName, { autoCreate: true })"
+      )
+      messages.push(`=> Topic ${topic.name} created.`)
+      const subscriptionName = "servicebot-test-subscription"
+      const subscription = await topic
+        .subscription(subscriptionName)
+        .get({ autoCreate: true })
+
+      messages.push(`const subscriptionName = "servicebot-test-subscription"`)
+      messages.push(
+        `const subscription = await topic.createSubscription(subscriptionName)`
+      )
+      messages.push(`=> Subscription ${subscriptionName} created.`)
+
+      await pubsub.subscription(subscriptionName).delete()
+      messages.push(`await pubsub.subscription(subscriptionName).delete();`)
+      messages.push(`=> Subscription ${subscriptionName} deleted.`)
+
+      res.json({ test: "success", messages })
+    } catch (e) {
+      next(e)
+    }
+  }
+
   const routeDefinition = [
     {
       endpoint: "/gcp-pub-sub/reload",
@@ -175,6 +215,14 @@ function* run(config, provide, channels) {
       middleware: [reloadTriggers],
       permissions: [],
       description: "Reload and set all the triggers"
+    },
+    {
+      endpoint: "/gcp-pub-sub/test/:id/:event",
+      method: "get",
+      middleware: [testTrigger],
+      permissions: [],
+      description:
+        "Check if the trigger can create a topic, push a message to it and read it"
     }
   ]
 

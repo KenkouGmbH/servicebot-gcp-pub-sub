@@ -2,6 +2,10 @@ textarea[name="service_account_key"] {
     min-height: 300px;
 }
 
+.test-results {
+    font-size: 14px;
+}
+
 .page-servicebot-gcp-pub-subs {
     padding: 40px 45px;
     min-height: 705px;

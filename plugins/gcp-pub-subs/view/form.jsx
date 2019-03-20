@@ -9,6 +9,7 @@ import { Field } from "redux-form"
 import Buttons from "../../../views/components/elements/buttons.jsx"
 import Modal from "../../../views/components/utilities/modal.jsx"
 import "../stylesheets/gcp-pub-subs.css"
+import "../stylesheets/prism.css"
 import Content from "../../../views/components/layouts/content.jsx"
 
 const isJsonString = str => {
@@ -48,7 +49,7 @@ const validJSON = value => {
   return undefined
 }
 
-function GCPConfigForm(props) {
+const GCPConfigForm = props => {
   return (
     <form>
       <Field
@@ -78,7 +79,7 @@ function GCPConfigForm(props) {
   )
 }
 
-function GCPConfigModal(props) {
+const GCPConfigModal = props => {
   let {
     show,
     hide,
@@ -137,7 +138,7 @@ const lifecycleEvents = [
   { value: "post_cancellation_pending", name: "Post cancellation pending" }
 ]
 
-function GCPTriggerForm(props) {
+const GCPTriggerForm = props => {
   console.log("[GCPTriggerForm] props: ", props)
   return (
     <form>
@@ -183,7 +184,7 @@ function GCPTriggerForm(props) {
   )
 }
 
-function GCPTriggerModal(props) {
+const GCPTriggerModal = props => {
   let {
     show,
     hide,
@@ -224,7 +225,56 @@ function GCPTriggerModal(props) {
   )
 }
 
-function timeFormater(cell) {
+class GCPTestTriggerModal extends React.Component {
+  constructor(props) {
+    super()
+    this.state = {
+      testSteps: []
+    }
+  }
+
+  async componentWillMount() {
+    const { id, event } = this.props.trigger
+    const response = await Fetcher(`/api/v1/gcp-pub-sub/test/${id}/${event}`)
+    console.log("test steps received", response)
+    this.setState({ testSteps: response.messages })
+  }
+
+  render() {
+    const { show, hide, trigger } = this.props
+    const { testSteps } = this.state
+    let content = <h4>Please wait ...</h4>
+    if (testSteps.length > 0)
+      content = (
+        <div>
+          <h4>Results:</h4>
+          <div className="test-results">
+            <pre>
+              <code class="lang-csharp">
+                {testSteps.map(msg => (
+                  <div>{msg}</div>
+                ))}
+              </code>
+            </pre>
+          </div>
+        </div>
+      )
+    return (
+      <Modal
+        modalTitle={`Testing trigger ${trigger.id}`}
+        icon="fa-plus"
+        hideCloseBtn={false}
+        show={show}
+        hide={hide}
+        hideFooter={false}
+      >
+        <div className="p-20">{content}</div>
+      </Modal>
+    )
+  }
+}
+
+const timeFormater = cell => {
   return (
     <div className="datatable-date">
       <span
@@ -251,6 +301,7 @@ class GCPPubSubs extends React.Component {
     this.state = {
       openConfig: false,
       openTrigger: false,
+      openTestTrigger: false,
       config: null,
       configs: [],
       trigger: null,
@@ -270,6 +321,8 @@ class GCPPubSubs extends React.Component {
     this.closeTriggerForm = this.closeTriggerForm.bind(this)
     this.deleteConfig = this.deleteConfig.bind(this)
     this.deleteTrigger = this.deleteTrigger.bind(this)
+    this.openTestTriggerModal = this.openTestTriggerModal.bind(this)
+    this.closeTestTriggerModal = this.closeTestTriggerModal.bind(this)
     this.handleSuccessResponse = this.handleSuccessResponse.bind(this)
     this.handleFailureResponse = this.handleFailureResponse.bind(this)
     this.showEvents = this.showEvents.bind(this)
@@ -292,7 +345,7 @@ class GCPPubSubs extends React.Component {
    */
   fetchConfigsData() {
     let self = this
-    return Fetcher("/api/v1/gcp-configs").then(function(response) {
+    return Fetcher("/api/v1/gcp-configs").then(response => {
       if (!response.error) {
         self.setState({ configs: response })
       }
@@ -302,7 +355,7 @@ class GCPPubSubs extends React.Component {
 
   fetchTriggersData() {
     let self = this
-    return Fetcher("/api/v1/gcp-pub-subs").then(function(response) {
+    return Fetcher("/api/v1/gcp-pub-subs").then(response => {
       if (!response.error) {
         self.setState({ triggers: response })
       }
@@ -315,9 +368,7 @@ class GCPPubSubs extends React.Component {
    */
   deleteConfig(config) {
     let self = this
-    Fetcher("/api/v1/gcp-configs/" + config.id, "DELETE").then(function(
-      response
-    ) {
+    Fetcher("/api/v1/gcp-configs/" + config.id, "DELETE").then(response => {
       if (!response.error) {
         self.fetchConfigsData()
       }
@@ -326,9 +377,7 @@ class GCPPubSubs extends React.Component {
 
   deleteTrigger(trigger) {
     let self = this
-    Fetcher("/api/v1/gcp-pub-subs/" + trigger.id, "DELETE").then(function(
-      response
-    ) {
+    Fetcher("/api/v1/gcp-pub-subs/" + trigger.id, "DELETE").then(response => {
       if (!response.error) {
         self.fetchTriggersData()
       }
@@ -353,10 +402,23 @@ class GCPPubSubs extends React.Component {
     this.setState({ openTrigger: false, trigger: {}, lastFetch: Date.now() })
   }
 
+  openTestTriggerModal(trigger) {
+    this.setState({ openTestTrigger: true, trigger })
+  }
+
+  closeTestTriggerModal() {
+    this.setState({
+      openTestTrigger: false,
+      trigger: {},
+      lastFetch: Date.now()
+    })
+  }
+
   handleSuccessResponse() {
     this.setState({
       openConfig: false,
       openTrigger: false,
+      openTestTrigger: false,
       config: {},
       trigger: {},
       lastFetch: Date.now(),
@@ -431,6 +493,13 @@ class GCPPubSubs extends React.Component {
         action: () => {
           return this.deleteTrigger(row)
         }
+      },
+      {
+        type: "button",
+        label: "Test",
+        action: () => {
+          return this.openTestTriggerModal(row)
+        }
       }
     ]
 
@@ -438,8 +507,16 @@ class GCPPubSubs extends React.Component {
   }
 
   render() {
+    // TODO: is *self* usage really neccesary?
     let self = this
-    let { openConfig, config, openTrigger, trigger, configs } = this.state
+    let {
+      openConfig,
+      config,
+      openTrigger,
+      openTestTrigger,
+      trigger,
+      configs
+    } = this.state
     const endpointModals = () => {
       if (openConfig) {
         return (
@@ -460,6 +537,14 @@ class GCPPubSubs extends React.Component {
             configs={configs}
             show={self.openTriggerForm}
             hide={this.closeTriggerForm}
+          />
+        )
+      } else if (openTestTrigger) {
+        return (
+          <GCPTestTriggerModal
+            trigger={trigger}
+            show={this.openTestTriggerModal}
+            hide={this.closeTestTriggerModal}
           />
         )
       } else {
@@ -656,7 +741,7 @@ const RouteDefinition = {
   navType: "settings",
   name: "GCP Pub/Sub Settings",
   path: "/gcp-pub-sub",
-  isVisible: function(user) {
+  isVisible: user => {
     //todo: this is dirty, need to do permission based...
     return user.role_id === 1
   }
