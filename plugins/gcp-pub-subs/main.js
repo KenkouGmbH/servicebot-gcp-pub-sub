@@ -180,12 +180,11 @@ function* run(config, provide, channels) {
       )[0]
       messages.push("const pubsub = new PubSub({...})")
       // Creates the new topic
-      const topic = await pubsub.topic(topicName, { autoCreate: true })
+      const [topic] = await pubsub.topic(topicName).get({ autoCreate: true })
 
       messages.push(`const topicName = "${topicName}"`)
-      messages.push(
-        "const topic = await pubsub.topic(topicName, { autoCreate: true })"
-      )
+      messages.push(`const [topic] = await pubsub.topic(topicName)
+                            .get({ autoCreate: true })`)
       messages.push(`=> Topic ${topic.name} created.`)
       const subscriptionName = "servicebot-test-subscription"
       const subscription = await topic
@@ -195,7 +194,7 @@ function* run(config, provide, channels) {
       messages.push(`const subscriptionName = "servicebot-test-subscription"`)
       messages.push(
         `const subscription = await topic.subscription(subscriptionName)
-                                   .get({ autoCreate: true })`
+                              .get({ autoCreate: true })`
       )
       messages.push(`=> Subscription ${subscriptionName} created.`)
 
