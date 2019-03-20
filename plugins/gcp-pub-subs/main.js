@@ -194,7 +194,8 @@ function* run(config, provide, channels) {
 
       messages.push(`const subscriptionName = "servicebot-test-subscription"`)
       messages.push(
-        `const subscription = await topic.createSubscription(subscriptionName)`
+        `const subscription = await topic.subscription(subscriptionName)
+                                   .get({ autoCreate: true })`
       )
       messages.push(`=> Subscription ${subscriptionName} created.`)
 
