@@ -6,7 +6,7 @@ A plugin for servicebot that allows to publish lifecycle events to Google Pub/Su
 
 The following actions are needed to enable this plugin:
 
-- Install the GCP `NodeJS` client library if you haven't done it yet:
+- Install the GCP `NodeJS` client library:
 ```
     npm install --save @google-cloud/pubsub
 ```
