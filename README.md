@@ -24,6 +24,11 @@ just after `require("../../api/webhooks")(api)`, for instance.
     ...
 ```
 to the list of base plugins.
+## Usage
+
+First you create a `GCP` configuration. In this configuration you provide the service account key in JSON format together with your `GCP` project id. This service account should have the right permissions to operate `Google Cloud Pub/Sub`. You can create as many configurations as you want.
+
+After a successful addition of at least one `GCP` configuration as described in the previous step you can add then a **`trigger`**, which you can associate with the available `GCP` configurations which will appear in a dropdown component, which will publish a message to the configured `topic` when the set `event` happens in service bot. The message published is the `servicebot` event itself in JSON.
 
 ## Servicebot events:
 In version `v0.11.163` the following are the events defined along with some simple description and whether their are implemented or not:
