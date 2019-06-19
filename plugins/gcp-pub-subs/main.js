@@ -94,11 +94,15 @@ function* run(config, provide, channels) {
     console.log("[GCP-PUB-SUB] sending to pub/sub", eventName, event)
     if (pubsubs[eventName]) {
       try {
+        const eventWrapped = {
+          "event_name": eventName,
+          "event_data": event
+        }
         const messageIds = await Promise.all(
           pubsubs[eventName].map(({ client, topic }) =>
             client
               .topic(topic, { autoCreate: true })
-              .publish(Buffer.from(JSON.stringify(event)))
+              .publish(Buffer.from(JSON.stringify(eventWrapped)))
           )
         )
         console.log(`message with id ${messageIds} sent`)
